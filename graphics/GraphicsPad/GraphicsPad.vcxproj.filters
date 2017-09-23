@@ -3,13 +3,13 @@
   <ItemGroup>
     <ClCompile Include="Mainer.cpp" />
     <ClCompile Include="MeGlWindow.cpp" />
+    <ClCompile Include="MeShaderCode.app" />
+    <ClCompile Include="Primitives\ShapeGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MeGlWindow.h" />
-    <ClInclude Include="FragmentShaderCode.glsl" />
     <ClInclude Include="Primitives\Vertex.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="VertexShaderCode.glsl" />
+    <ClInclude Include="Primitives\ShapeData.h" />
+    <ClInclude Include="Primitives\ShapeGenerator.h" />
   </ItemGroup>
 </Project>
