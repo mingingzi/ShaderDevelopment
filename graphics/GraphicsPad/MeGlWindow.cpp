@@ -5,12 +5,12 @@
 #include <glm\glm.hpp>
 #include <Primitives\Vertex.h>
 #include <Primitives\ShapeGenerator.h>
+using namespace std;
+using glm::vec3;
 
-
-extern const char* vertexShaderCode;
-extern const char* fragmentShaderCode;
-
+GLuint programID;
 GLuint sizeofVerts;
+
 void sendDataToOpenGL()
 {
 	ShapeData tri = ShapeGenerator::makeTriangle();
@@ -30,6 +30,20 @@ void sendDataToOpenGL()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, 0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (char*)(sizeof(float) * 3));
+	tri.cleanup();
+}
+
+string readShaderCode(const char* fileName)
+{
+	ifstream meInput(fileName);
+	if (!meInput.good())
+	{
+		cout << "File failed to load..." << fileName;
+		exit(1);
+	}
+	return std::string(
+		std::istreambuf_iterator<char>(meInput),
+		std::istreambuf_iterator<char>());
 }
 
 void installShaders()
@@ -38,15 +52,17 @@ void installShaders()
 	GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 
 	const char* adapter[1];
-	adapter[0] = vertexShaderCode;
+	string temp = readShaderCode("VertexShaderCode.glsl");
+	adapter[0] = temp.c_str();
 	glShaderSource(vertexShaderID, 1, adapter, 0);
-	adapter[0] = fragmentShaderCode;
+	temp = readShaderCode("FragmentShaderCode.glsl");
+	adapter[0] = temp.c_str();
 	glShaderSource(fragmentShaderID, 1, adapter, 0);
 
 	glCompileShader(vertexShaderID);
 	glCompileShader(fragmentShaderID);
 
-	GLuint programID = glCreateProgram();
+	programID = glCreateProgram();
 	glAttachShader(programID, vertexShaderID);
 	glAttachShader(programID, fragmentShaderID);
 	glLinkProgram(programID);
@@ -66,7 +82,18 @@ void MeGlWindow::initializeGL()
 
 void MeGlWindow::paintGL()
 {
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, width(), height());
+	vec3 dominatingColor(1.0f, 0.0f, 0.0f);
+	GLint dominatingColorUniformLocation = glGetUniformLocation(programID, "dominatingColor");
+	GLint yFlipUniformLocation = glGetUniformLocation(programID, "yFlip");
+	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
+	glUniform1f(yFlipUniformLocation, 1.0f);
 	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, (void*)sizeofVerts);
 
+	dominatingColor.r = 0;
+	dominatingColor.b = 1;
+	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
+	glUniform1f(yFlipUniformLocation, -1.0f);
+	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, (void*)sizeofVerts);
 }

@@ -12,4 +12,9 @@
     <ClInclude Include="Primitives\ShapeData.h" />
     <ClInclude Include="Primitives\ShapeGenerator.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="VertexShaderCode.glsl" />
+    <None Include="FragmentShaderCode.glsl" />
+    <None Include="GraphicsPad.VC.db" />
+  </ItemGroup>
 </Project>

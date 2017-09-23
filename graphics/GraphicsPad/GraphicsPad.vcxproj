@@ -161,6 +161,11 @@
       <FileType>Document</FileType>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="FragmentShaderCode.glsl" />
+    <None Include="GraphicsPad.VC.db" />
+    <None Include="VertexShaderCode.glsl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
