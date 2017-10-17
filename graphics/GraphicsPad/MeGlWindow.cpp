@@ -1,12 +1,16 @@
 #include <gl\glew.h>
 #include <iostream>
 #include <fstream>
+#include <QtGui\qmouseevent>
+#include <QtGui\qkeyevent>
 #include <MeGlWindow.h>
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtx\transform.hpp>
 #include <Primitives\Vertex.h>
 #include <Primitives\ShapeGenerator.h>
 #include <chrono>
+#include "Camera.h"
 
 using namespace std;
 using glm::vec3;
@@ -16,6 +20,7 @@ GLuint programID;
 GLuint sizeofVerts;
 GLuint numIndices;
 GLfloat yAngle = 0.0f;
+Camera camera;
 
 void sendDataToOpenGL()
 {
@@ -38,6 +43,38 @@ void sendDataToOpenGL()
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (char*)(sizeof(float) * 3));
 	numIndices = shape.numIndices;
 	shape.cleanup();
+}
+
+void MeGlWindow::mouseMoveEvent(QMouseEvent* e)
+{
+	camera.mouseUpdate(glm::vec2(e->x(), e->y()));
+	repaint();
+}
+
+void MeGlWindow::keyPressEvent(QKeyEvent* e)
+{
+	switch (e->key())
+	{
+	case Qt::Key::Key_W:
+		camera.moveForward();
+		break;
+	case Qt::Key::Key_S:
+		camera.moveBackward();
+		break;
+	case Qt::Key::Key_A:
+		camera.strafeLeft();
+		break;
+	case Qt::Key::Key_D:
+		camera.strafeRight();
+		break;
+	case Qt::Key::Key_R:
+		camera.moveUp();
+		break;
+	case Qt::Key::Key_F:
+		camera.moveDown();
+		break;
+	}
+	repaint();
 }
 
 string readShaderCode(const char* fileName)
@@ -103,11 +140,18 @@ void MeGlWindow::paintGL()
 
 	//transformation
 	mat4 projectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 10.0f);
-	mat4 projectionTranslationMatrix = glm::translate(projectionMatrix, vec3(0.0f, 0.0f, -3.0f));
+	glm::mat4 CameraMatrix = camera.getWorldToViewMatrix();
+	mat4 projectionTranslationMatrix = glm::translate(projectionMatrix * CameraMatrix, vec3(0.0f, 0.0f, -3.0f));
 	mat4 xRotationMatrix = glm::rotate(projectionTranslationMatrix, 45.0f, vec3(1.0f, 0.0f, 0.0f));
+
+	
 
 	mat4 fullTransformMatrix = glm::rotate(xRotationMatrix, yAngle, vec3(-1.0f, -1.0f, 1.0f));
 
+	/*vec3 dominatingColor(1.0f, 0.1f, 0.1f);
+	GLint dominatingColorUniformLocation = glGetUniformLocation(programID, "dominatingColor");
+	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
+*/
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
 
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
@@ -115,6 +159,19 @@ void MeGlWindow::paintGL()
 	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, (void*)sizeofVerts);
 
 	//rotate automatically with QTimer
-	yAngle += 0.5f;
-	if (yAngle > 360.0f) yAngle -= 360.0f;
+//	yAngle += 0.005f;
+//	if (yAngle > 360.0f) yAngle -= 360.0f;
+//
+//	fullTransformMatrix = glm::rotate(xRotationMatrix, yAngle, vec3(-1.0f, 1.0f, 1.0f));
+//	fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
+//
+//	/*dominatingColor.r = 0.1f;
+//	dominatingColor.g = 1.0f;
+//	dominatingColor.b = 0.1f;
+//	dominatingColorUniformLocation = glGetUniformLocation(programID, "dominatingColor");
+//	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
+//*/
+//	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+//
+//	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, (void*)sizeofVerts);
 }
