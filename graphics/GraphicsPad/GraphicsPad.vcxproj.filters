@@ -17,5 +17,7 @@
     <None Include="VertexShaderCode.glsl" />
     <None Include="FragmentShaderCode.glsl" />
     <None Include="GraphicsPad.VC.db" />
+    <None Include="LightVertexShaderCode.glsl" />
+    <None Include="LightFragmentShaderCode.glsl" />
   </ItemGroup>
 </Project>

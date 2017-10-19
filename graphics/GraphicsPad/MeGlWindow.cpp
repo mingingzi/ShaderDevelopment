@@ -17,6 +17,7 @@ using glm::vec3;
 using glm::mat4;
 
 GLuint programID;
+GLuint lightProgramID;
 
 GLuint cubeSizeofVerts;
 GLuint planeSizeofVerts;
@@ -33,7 +34,11 @@ GLuint sphereNumIndices;
 
 
 GLfloat yAngle = 0.0f;
+GLfloat rColor = 0.0f;
+GLfloat gColor = 0.0f;
+GLfloat bColor = 0.0f;
 Camera camera;
+glm::vec3 lightPosition(0.0f, 3.0f, -3.0f);
 
 void sendDataToOpenGL()
 {
@@ -141,6 +146,23 @@ void MeGlWindow::keyPressEvent(QKeyEvent* e)
 	case Qt::Key::Key_F:
 		camera.moveDown();
 		break;
+	case Qt::Key::Key_I:
+		lightPosition += glm::vec3(0, 0, -0.2);
+		break;
+	case Qt::Key::Key_K:
+		lightPosition += glm::vec3(0, 0, 0.2);
+		break;
+	case Qt::Key::Key_Left:
+		lightPosition += glm::vec3(-0.2, 0, -0.0);
+		break;
+	case Qt::Key::Key_Right:
+		lightPosition += glm::vec3(0.2, 0, -0.0);
+		break;
+	case Qt::Key::Key_Up:
+		lightPosition += glm::vec3(0, 0.2, -0.0);
+		break;
+	case Qt::Key::Key_Down:
+		lightPosition += glm::vec3(0, -0.2, -0.0);
 	}
 	repaint();
 }
@@ -179,8 +201,24 @@ void installShaders()
 	glAttachShader(programID, fragmentShaderID);
 	glLinkProgram(programID);
 
-	glUseProgram(programID);
+	glDeleteShader(vertexShaderID);
+	glDeleteShader(fragmentShaderID);
 
+	//Light Placeholder Shader
+	temp = readShaderCode("LightVertexShaderCode.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(vertexShaderID, 1, adapter, 0);
+	temp = readShaderCode("LightFragmentShaderCode.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(fragmentShaderID, 1, adapter, 0);
+
+	glCompileShader(vertexShaderID);
+	glCompileShader(fragmentShaderID);
+
+	lightProgramID = glCreateProgram();
+	glAttachShader(lightProgramID, vertexShaderID);
+	glAttachShader(lightProgramID, fragmentShaderID);
+	glLinkProgram(lightProgramID);
 }
 
 
@@ -209,6 +247,12 @@ void MeGlWindow::paintGL()
 	//rotate automatically with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
+	rColor -= 0.0003f;
+	if (rColor < -1.0f) rColor += 1.0f;
+	gColor -= 0.0001f;
+	if (gColor < -1.0f) gColor += 1.0f;
+	bColor -= 0.00008f;
+	if (bColor < -1.0f) bColor += 1.0f;
 
 	//Matrix Setup
 	glUseProgram(programID);
@@ -220,9 +264,8 @@ void MeGlWindow::paintGL()
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
 	//Lighting Setup
-	glm::vec4 ambientLight(1.0f, 0.05f, 0.05f, 1.0f);
-	glm::vec3 lightPosition(0.0f, 3.0f, -3.0f);
-
+	glm::vec4 ambientLight(1.0f + rColor, 0.5f + gColor, 0.05f + bColor, 1.0f);
+	
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
 	
@@ -236,10 +279,6 @@ void MeGlWindow::paintGL()
 		glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f)) *
 		glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));
 	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
-	/*	vec3 dominatingColor(1.0f, 1.0f, 1.0f);
-	GLint dominatingColorUniformLocation = glGetUniformLocation(programID, "dominatingColor");
-	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
-*/
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &cubeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
@@ -261,4 +300,15 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &sphereModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, sphereNumIndices, GL_UNSIGNED_SHORT, (void*)sphereSizeofVerts);
+
+	//Light Placeholder
+	glUseProgram(lightProgramID);
+	glBindVertexArray(cubeVertexArrayObjectID);
+	mat4 lightModelToWorldMatrix =
+		glm::translate(lightPosition) * 
+		glm::scale(0.08f, 0.08f, 0.08f);
+	GLuint LightTransformMatrixUniformLocation = glGetUniformLocation(lightProgramID, "lightTransformMatrix");
+	mat4 lightTransformMatrix = World2ProjectionMatrix  *  lightModelToWorldMatrix;
+	glUniformMatrix4fv(LightTransformMatrixUniformLocation, 1, GL_FALSE, &lightTransformMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 }

@@ -11,7 +11,7 @@ void main()
 {
 	// Diffuse
 	vec3 lightVectorWorld = normalize(lightPositionWorld - vertexPositionWorld);
-	float brightness = dot(lightVectorWorld, normalize(normalWorld));
+	float brightness = clamp(dot(lightVectorWorld, normalize(normalWorld)), 0, 1);
 	vec4 diffuseLight = vec4(brightness, brightness, brightness, 1.0);
 
 	daColor = diffuseLight + ambientLight;
