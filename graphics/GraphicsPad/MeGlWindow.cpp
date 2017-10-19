@@ -17,32 +17,100 @@ using glm::vec3;
 using glm::mat4;
 
 GLuint programID;
-GLuint sizeofVerts;
-GLuint numIndices;
+
+GLuint cubeSizeofVerts;
+GLuint planeSizeofVerts;
+GLuint sphereSizeofVerts;
+
+GLuint cubeVertexArrayObjectID;
+GLuint planeVertexArrayObjectID;
+GLuint sphereVertexArrayObjectID;
+
+
+GLuint cubeNumIndices;
+GLuint planeNumIndices;
+GLuint sphereNumIndices;
+
+
 GLfloat yAngle = 0.0f;
 Camera camera;
 
 void sendDataToOpenGL()
 {
-	ShapeData shape = ShapeGenerator::makeCube();
-
-	sizeofVerts = shape.vertexBuffersize();
+	ShapeData cube = ShapeGenerator::makeCube();
+	ShapeData plane = ShapeGenerator::makePlane(15);
+	ShapeData sphere = ShapeGenerator::makeSphere(20);
 
 	GLuint myBufferID;
 	
 	glGenBuffers(1, &myBufferID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
+
+	glBufferData(GL_ARRAY_BUFFER, 
+		cube.vertexBuffersize() + cube.indexBuffersize() + 
+		plane.vertexBuffersize() + plane.indexBuffersize() + 
+		sphere.vertexBuffersize() + sphere.indexBuffersize(), 0, GL_STATIC_DRAW);
+
+	GLsizeiptr currentOffset = 0;
+	glBufferSubData(GL_ARRAY_BUFFER, currentOffset, cube.vertexBuffersize(), cube.vertices);
+	currentOffset += cube.vertexBuffersize();
+	cubeSizeofVerts = currentOffset;
+	glBufferSubData(GL_ARRAY_BUFFER, currentOffset, cube.indexBuffersize(), cube.indices);
+	currentOffset += cube.indexBuffersize();
+	glBufferSubData(GL_ARRAY_BUFFER, currentOffset, plane.vertexBuffersize(), plane.vertices);
+	currentOffset += plane.vertexBuffersize();
+	planeSizeofVerts = currentOffset;
+	glBufferSubData(GL_ARRAY_BUFFER, currentOffset, plane.indexBuffersize(), plane.indices);
+	currentOffset += plane.indexBuffersize();
+	glBufferSubData(GL_ARRAY_BUFFER, currentOffset, sphere.vertexBuffersize(), sphere.vertices);
+	currentOffset += sphere.vertexBuffersize();
+	sphereSizeofVerts = currentOffset;
+	glBufferSubData(GL_ARRAY_BUFFER, currentOffset, sphere.indexBuffersize(), sphere.indices);
+	currentOffset += sphere.indexBuffersize();
+	
+	cubeNumIndices = cube.numIndices;
+	planeNumIndices = plane.numIndices;
+	sphereNumIndices = sphere.numIndices;
+	
+	glGenVertexArrays(1, &cubeVertexArrayObjectID);
+	glGenVertexArrays(1, &planeVertexArrayObjectID);
+	glGenVertexArrays(1, &sphereVertexArrayObjectID);
+
+	glBindVertexArray(cubeVertexArrayObjectID);
+	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, 0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sizeof(float) * 3));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sizeof(float) * 6));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
-	glBufferData(GL_ARRAY_BUFFER, shape.vertexBuffersize() + shape.indexBuffersize(), 0, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, shape.vertexBuffersize(), shape.vertices);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, shape.vertexBuffersize(), shape.indexBuffersize(), shape.indices);
+	glBindVertexArray(planeVertexArrayObjectID);
+	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
+	GLuint planeByteOffset = cube.vertexBuffersize() + cube.indexBuffersize();
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(planeByteOffset));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (char*)(sizeof(float) * 3));
-	numIndices = shape.numIndices;
-	shape.cleanup();
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(planeByteOffset + sizeof(float) * 3));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(planeByteOffset + sizeof(float) * 6));
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
+
+	glBindVertexArray(sphereVertexArrayObjectID);
+	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
+	GLuint sphereByteOffset = planeByteOffset + plane.vertexBuffersize() + plane.indexBuffersize();
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sphereByteOffset));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sphereByteOffset + sizeof(float) * 3));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sphereByteOffset + sizeof(float) * 6));
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
+
+	cube.cleanup();
+	plane.cleanup();
+	sphere.cleanup();
 }
 
 void MeGlWindow::mouseMoveEvent(QMouseEvent* e)
@@ -122,8 +190,8 @@ void MeGlWindow::initializeGL()
 	glEnable(GL_DEPTH_TEST);
 	sendDataToOpenGL();
 	installShaders();
-	this->setFixedWidth(800);
-	this->setFixedHeight(500);
+	this->setFixedWidth(1600);
+	this->setFixedHeight(1000);
 
 	//timer setup
 	Mytimer = new QTimer(this);
@@ -138,40 +206,41 @@ void MeGlWindow::paintGL()
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, width(), height());
 
-	//transformation
-	mat4 projectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 10.0f);
-	glm::mat4 CameraMatrix = camera.getWorldToViewMatrix();
-	mat4 projectionTranslationMatrix = glm::translate(projectionMatrix * CameraMatrix, vec3(0.0f, 0.0f, -3.0f));
+	//rotate automatically with QTimer
+	yAngle += 0.5f;
+	if (yAngle > 360.0f) yAngle -= 360.0f;
+
+	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
+	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 20.0f);
+	glm::mat4 World2ProjectionMatrix = viewToProjectionMatrix  * worldToViewMatrix;
+
+	//Cube1
+	glBindVertexArray(cubeVertexArrayObjectID);
+	mat4 projectionTranslationMatrix = glm::translate(World2ProjectionMatrix, vec3(-3.0f, 0.0f, -8.0f));
 	mat4 xRotationMatrix = glm::rotate(projectionTranslationMatrix, 45.0f, vec3(1.0f, 0.0f, 0.0f));
-
-	
-
 	mat4 fullTransformMatrix = glm::rotate(xRotationMatrix, yAngle, vec3(-1.0f, -1.0f, 1.0f));
 
-	/*vec3 dominatingColor(1.0f, 0.1f, 0.1f);
+	/*	vec3 dominatingColor(1.0f, 1.0f, 1.0f);
 	GLint dominatingColorUniformLocation = glGetUniformLocation(programID, "dominatingColor");
 	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
 */
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
 
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 
-	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, (void*)sizeofVerts);
+	//Plane1
+	glBindVertexArray(planeVertexArrayObjectID);
+	projectionTranslationMatrix = glm::translate(World2ProjectionMatrix, vec3(0.0f, 0.0f, -10.0f));
+	fullTransformMatrix = glm::rotate(projectionTranslationMatrix, 45.0f, vec3(1.0f, 0.0f, 0.0f));
 
-	//rotate automatically with QTimer
-//	yAngle += 0.005f;
-//	if (yAngle > 360.0f) yAngle -= 360.0f;
-//
-//	fullTransformMatrix = glm::rotate(xRotationMatrix, yAngle, vec3(-1.0f, 1.0f, 1.0f));
-//	fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
-//
-//	/*dominatingColor.r = 0.1f;
-//	dominatingColor.g = 1.0f;
-//	dominatingColor.b = 0.1f;
-//	dominatingColorUniformLocation = glGetUniformLocation(programID, "dominatingColor");
-//	glUniform3fv(dominatingColorUniformLocation, 1, &dominatingColor[0]);
-//*/
-//	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
-//
-//	glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT, (void*)sizeofVerts);
+	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
+
+	//Sphere1
+	glBindVertexArray(sphereVertexArrayObjectID);
+	projectionTranslationMatrix = glm::translate(World2ProjectionMatrix, vec3(1.0f, 0.0f, -8.0f));
+	fullTransformMatrix = glm::rotate(projectionTranslationMatrix, 45.0f, vec3(1.0f, 0.0f, 0.0f));
+	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, sphereNumIndices, GL_UNSIGNED_SHORT, (void*)sphereSizeofVerts);
 }
