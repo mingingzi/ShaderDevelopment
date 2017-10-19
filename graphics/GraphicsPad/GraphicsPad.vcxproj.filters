@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="Mainer.cpp" />
     <ClCompile Include="MeGlWindow.cpp" />
-    <ClCompile Include="MeShaderCode.app" />
     <ClCompile Include="Primitives\ShapeGenerator.cpp" />
     <ClCompile Include="Camera.cpp" />
   </ItemGroup>
