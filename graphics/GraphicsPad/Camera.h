@@ -20,4 +20,5 @@ public:
 	void strafeRight();
 	void moveUp();
 	void moveDown();
+	glm::vec3 getPosition() const { return position; }
 };

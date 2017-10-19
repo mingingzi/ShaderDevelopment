@@ -204,7 +204,7 @@ void installShaders()
 	glDeleteShader(vertexShaderID);
 	glDeleteShader(fragmentShaderID);
 
-	//Light Placeholder Shader
+	// Light Placeholder Shader
 	temp = readShaderCode("LightVertexShaderCode.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(vertexShaderID, 1, adapter, 0);
@@ -231,7 +231,7 @@ void MeGlWindow::initializeGL()
 	this->setFixedWidth(1600);
 	this->setFixedHeight(1000);
 
-	//timer setup
+	//Timer Setup
 	Mytimer = new QTimer(this);
 	connect(Mytimer, SIGNAL(timeout()), this, SLOT(update()));
 	Mytimer->setInterval(0);
@@ -244,7 +244,7 @@ void MeGlWindow::paintGL()
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, width(), height());
 
-	//rotate automatically with QTimer
+	// Change with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
 	rColor -= 0.0003f;
@@ -254,7 +254,7 @@ void MeGlWindow::paintGL()
 	bColor -= 0.00008f;
 	if (bColor < -1.0f) bColor += 1.0f;
 
-	//Matrix Setup
+	// Matrix Setup
 	glUseProgram(programID);
 	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
 	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 20.0f);
@@ -263,7 +263,7 @@ void MeGlWindow::paintGL()
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
-	//Lighting Setup
+	// Lighting Setup
 	glm::vec4 ambientLight(1.0f + rColor, 0.5f + gColor, 0.05f + bColor, 1.0f);
 	
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
@@ -272,7 +272,12 @@ void MeGlWindow::paintGL()
 	GLint lightPositionUniformLocation = glGetUniformLocation(programID, "lightPositionWorld");
 	glUniform3fv(lightPositionUniformLocation, 1, &lightPosition[0]);
 
-	//Cube1
+	// Camera Setup
+	GLint eyePositionWorldUniformLocation = glGetUniformLocation(programID, "eyePositionWorld");
+	glm::vec3 eyePosition = camera.getPosition();
+	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
+
+	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 cubeModelToWorldMatrix = 
 		glm::translate(-3.0f, 0.0f, -8.0f) *
@@ -283,7 +288,7 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &cubeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 
-	//Plane1
+	// Plane1
 	glBindVertexArray(planeVertexArrayObjectID);
 	mat4 planeModelToWorldMatrix =
 		glm::translate(0.0f, 0.0f, -10.0f) * 
@@ -293,7 +298,7 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 
-	//Sphere1
+	// Sphere1
 	glBindVertexArray(sphereVertexArrayObjectID);
 	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f);
 	fullTransformMatrix = World2ProjectionMatrix * sphereModelToWorldMatrix;
@@ -301,7 +306,7 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &sphereModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, sphereNumIndices, GL_UNSIGNED_SHORT, (void*)sphereSizeofVerts);
 
-	//Light Placeholder
+	// Light Placeholder
 	glUseProgram(lightProgramID);
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 lightModelToWorldMatrix =
