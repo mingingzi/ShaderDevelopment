@@ -16,17 +16,24 @@ void main()
 	vec3 lightVectorWorld = normalize(lightPositionWorld - vertexPositionWorld);
 	float brightness = clamp(dot(lightVectorWorld, normalize(normalWorld)), 0, 1);
 	vec4 texColor = texture(myTexture, textureCoordinate);
-	vec4 diffuseLight = brightness * texColor;
+	vec4 diffuseLight;
+	if (texColor == vec4(0.0, 0.0, 0.0, 1.0))
+	{
+		diffuseLight = vec4(brightness, brightness, brightness, 1.0);
+	} else {
+		
+		diffuseLight = brightness * texColor;
+	}
 
 	// Specular
 	vec3 reflectedLightVectorWorld = reflect(-lightVectorWorld, normalWorld);
 	vec3 eyeVectorWorld = normalize(eyePositionWorld - vertexPositionWorld);
-	float specularIntensity = pow(clamp(dot(reflectedLightVectorWorld, eyeVectorWorld), 0, 1), 20); //Gloss
+	float specularIntensity = clamp(dot(reflectedLightVectorWorld, eyeVectorWorld), 0, 1); //Gloss
 	vec4 specularLight = vec4(specularIntensity * vec3(1.0, 0.0, 0.0), 1.0);
  
 	// Attenuation
 	float distanceToLight = length(lightPositionWorld - vertexPositionWorld);
-	float attenuation = 1.0 / (1.0 + 1 * pow(distanceToLight, 2));
+	float attenuation = 1.0 / (1.0 + 0.3 * pow(distanceToLight, 2));
 
 	daColor = ambientLight + attenuation * (diffuseLight + specularLight);
 }

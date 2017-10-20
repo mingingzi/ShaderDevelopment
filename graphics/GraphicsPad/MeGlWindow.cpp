@@ -291,7 +291,7 @@ void MeGlWindow::paintGL()
 	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 cubeModelToWorldMatrix = 
-		glm::translate(-3.0f, 0.0f, -8.0f) *
+		glm::translate(-3.0f, 0.5f, -8.0f) *
 		glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f)) *
 		glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));
 	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
@@ -299,25 +299,24 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &cubeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 
-	// Plane1
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindVertexArray(planeVertexArrayObjectID);
-	mat4 planeModelToWorldMatrix =
-		glm::translate(0.0f, 0.0f, -10.0f) * 
-		glm::rotate(30.0f, vec3(1.0f, 0.0f, 0.0f));
-	fullTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
-	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
-	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
-	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
-
 	// Sphere1
-	glBindTexture(GL_TEXTURE_2D, textureBufferID);
 	glBindVertexArray(sphereVertexArrayObjectID);
 	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f);
 	fullTransformMatrix = World2ProjectionMatrix * sphereModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &sphereModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, sphereNumIndices, GL_UNSIGNED_SHORT, (void*)sphereSizeofVerts);
+
+	// Base Plane
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(planeVertexArrayObjectID);
+	mat4 planeModelToWorldMatrix =
+		glm::translate(0.0f, 0.0f, -10.0f) *
+		glm::rotate(30.0f, vec3(1.0f, 0.0f, 0.0f));
+	fullTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
+	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 
 	// Light Placeholder
 	glUseProgram(lightProgramID);
