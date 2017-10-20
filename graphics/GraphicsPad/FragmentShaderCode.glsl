@@ -18,8 +18,12 @@ void main()
 	// Specular
 	vec3 reflectedLightVectorWorld = reflect(-lightVectorWorld, normalWorld);
 	vec3 eyeVectorWorld = normalize(eyePositionWorld - vertexPositionWorld);
-	float s = clamp(dot(reflectedLightVectorWorld, eyeVectorWorld), 0, 1);
-	vec4 specularLight = vec4(s, s, s, 1.0);
+	float specularIntensity = pow(clamp(dot(reflectedLightVectorWorld, eyeVectorWorld), 0, 1), 50); //Gloss
+	vec4 specularLight = vec4(specularIntensity * vec3(1.0, 0.0, 0.0), 1.0);
  
-	daColor = diffuseLight + ambientLight + specularLight;
+	// Attenuation
+	float distanceToLight = length(lightPositionWorld - vertexPositionWorld);
+	float attenuation = 1.0 / (1.0 + 1 * pow(distanceToLight, 2));
+
+	daColor = ambientLight + attenuation * (diffuseLight + specularLight);
 }

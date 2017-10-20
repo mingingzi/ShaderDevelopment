@@ -38,7 +38,7 @@ GLfloat rColor = 0.0f;
 GLfloat gColor = 0.0f;
 GLfloat bColor = 0.0f;
 Camera camera;
-glm::vec3 lightPosition(0.0f, 3.0f, -3.0f);
+glm::vec3 lightPosition(0.0f, 0.0f, -4.0f);
 
 void sendDataToOpenGL()
 {
@@ -247,12 +247,12 @@ void MeGlWindow::paintGL()
 	// Change with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
-	rColor -= 0.0003f;
-	if (rColor < -1.0f) rColor += 1.0f;
+	/*rColor -= 0.0003f;
+	if (rColor < -1.0f) rColor += 0.5f;
 	gColor -= 0.0001f;
-	if (gColor < -1.0f) gColor += 1.0f;
+	if (gColor < -1.0f) gColor += 0.5f;
 	bColor -= 0.00008f;
-	if (bColor < -1.0f) bColor += 1.0f;
+	if (bColor < -1.0f) bColor += 0.5f;*/
 
 	// Matrix Setup
 	glUseProgram(programID);
@@ -264,7 +264,7 @@ void MeGlWindow::paintGL()
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
 	// Lighting Setup
-	glm::vec4 ambientLight(1.0f + rColor, 0.5f + gColor, 0.05f + bColor, 1.0f);
+	glm::vec4 ambientLight(0.2f + rColor, 0.2f + gColor, 0.2f + bColor, 1.0f);
 	
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
@@ -292,7 +292,7 @@ void MeGlWindow::paintGL()
 	glBindVertexArray(planeVertexArrayObjectID);
 	mat4 planeModelToWorldMatrix =
 		glm::translate(0.0f, 0.0f, -10.0f) * 
-		glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f));
+		glm::rotate(30.0f, vec3(1.0f, 0.0f, 0.0f));
 	fullTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
