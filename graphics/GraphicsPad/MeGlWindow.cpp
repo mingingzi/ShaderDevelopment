@@ -34,9 +34,6 @@ GLuint sphereNumIndices;
 
 
 GLfloat yAngle = 0.0f;
-GLfloat rColor = 0.0f;
-GLfloat gColor = 0.0f;
-GLfloat bColor = 0.0f;
 Camera camera;
 glm::vec3 lightPosition(0.0f, 0.0f, -4.0f);
 
@@ -84,33 +81,39 @@ void sendDataToOpenGL()
 	glBindVertexArray(cubeVertexArrayObjectID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, 0);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sizeof(float) * 3));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sizeof(float) * 3));
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sizeof(float) * 6));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sizeof(float) * 6));
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sizeof(float) * 9));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
 	glBindVertexArray(planeVertexArrayObjectID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
 	GLuint planeByteOffset = cube.vertexBuffersize() + cube.indexBuffersize();
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(planeByteOffset));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(planeByteOffset + sizeof(float) * 3));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset + sizeof(float) * 3));
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(planeByteOffset + sizeof(float) * 6));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset + sizeof(float) * 6));
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset + sizeof(float) * 9));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
 	glBindVertexArray(sphereVertexArrayObjectID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
 	GLuint sphereByteOffset = planeByteOffset + plane.vertexBuffersize() + plane.indexBuffersize();
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sphereByteOffset));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sphereByteOffset + sizeof(float) * 3));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset + sizeof(float) * 3));
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 9, (char*)(sphereByteOffset + sizeof(float) * 6));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset + sizeof(float) * 6));
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset + sizeof(float) * 9));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
 	cube.cleanup();
@@ -247,12 +250,6 @@ void MeGlWindow::paintGL()
 	// Change with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
-	/*rColor -= 0.0003f;
-	if (rColor < -1.0f) rColor += 0.5f;
-	gColor -= 0.0001f;
-	if (gColor < -1.0f) gColor += 0.5f;
-	bColor -= 0.00008f;
-	if (bColor < -1.0f) bColor += 0.5f;*/
 
 	// Matrix Setup
 	glUseProgram(programID);
@@ -264,7 +261,7 @@ void MeGlWindow::paintGL()
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
 	// Lighting Setup
-	glm::vec4 ambientLight(0.2f + rColor, 0.2f + gColor, 0.2f + bColor, 1.0f);
+	glm::vec4 ambientLight(0.2f, 0.2f, 0.2f, 1.0f);
 	
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
@@ -276,6 +273,20 @@ void MeGlWindow::paintGL()
 	GLint eyePositionWorldUniformLocation = glGetUniformLocation(programID, "eyePositionWorld");
 	glm::vec3 eyePosition = camera.getPosition();
 	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
+
+	// Texture Setup
+	const char* texName = "blueBird.png";
+	QImage texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
+	glActiveTexture(GL_TEXTURE0);
+	GLuint textureBufferID;
+	glGenTextures(1, &textureBufferID);
+	glBindTexture(GL_TEXTURE_2D, textureBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width(), texture.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	GLint textureUniformLocation = glGetUniformLocation(programID, "myTexture");
+	glUniform1i(textureUniformLocation, 0);
 
 	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
@@ -289,6 +300,7 @@ void MeGlWindow::paintGL()
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 
 	// Plane1
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(planeVertexArrayObjectID);
 	mat4 planeModelToWorldMatrix =
 		glm::translate(0.0f, 0.0f, -10.0f) * 
@@ -299,6 +311,7 @@ void MeGlWindow::paintGL()
 	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 
 	// Sphere1
+	glBindTexture(GL_TEXTURE_2D, textureBufferID);
 	glBindVertexArray(sphereVertexArrayObjectID);
 	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f);
 	fullTransformMatrix = World2ProjectionMatrix * sphereModelToWorldMatrix;
