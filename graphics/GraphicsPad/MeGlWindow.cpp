@@ -82,39 +82,45 @@ void sendDataToOpenGL()
 	glBindVertexArray(cubeVertexArrayObjectID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, 0);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sizeof(float) * 3));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sizeof(float) * 3));
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sizeof(float) * 6));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sizeof(float) * 6));
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sizeof(float) * 9));
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sizeof(float) * 9));
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sizeof(float) * 11));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
 	glBindVertexArray(planeVertexArrayObjectID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
 	GLuint planeByteOffset = cube.vertexBuffersize() + cube.indexBuffersize();
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(planeByteOffset));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset + sizeof(float) * 3));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(planeByteOffset + sizeof(float) * 3));
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset + sizeof(float) * 6));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(planeByteOffset + sizeof(float) * 6));
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(planeByteOffset + sizeof(float) * 9));
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(planeByteOffset + sizeof(float) * 9));
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(planeByteOffset + sizeof(float) * 11));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
 	glBindVertexArray(sphereVertexArrayObjectID);
 	glBindBuffer(GL_ARRAY_BUFFER, myBufferID);
 	GLuint sphereByteOffset = planeByteOffset + plane.vertexBuffersize() + plane.indexBuffersize();
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sphereByteOffset));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset + sizeof(float) * 3));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sphereByteOffset + sizeof(float) * 3));
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset + sizeof(float) * 6));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sphereByteOffset + sizeof(float) * 6));
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 11, (char*)(sphereByteOffset + sizeof(float) * 9));
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sphereByteOffset + sizeof(float) * 9));
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 15, (char*)(sphereByteOffset + sizeof(float) * 11));
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, myBufferID);
 
 	cube.cleanup();
@@ -309,6 +315,19 @@ void MeGlWindow::paintGL()
 	GLint textureUniformLocation = glGetUniformLocation(programID, "myTexture");
 	glUniform1i(textureUniformLocation, 0);
 
+	// Normal Setup
+	const char* normalMapName = "Glass_Normal.png";
+	QImage Normalmap = QGLWidget::convertToGLFormat(QImage(normalMapName, "PNG"));
+	glActiveTexture(GL_TEXTURE1);
+	GLuint NormalBufferID;
+	glGenTextures(1, &NormalBufferID);
+	glBindTexture(GL_TEXTURE_2D, NormalBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Normalmap.width(), Normalmap.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, Normalmap.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	GLint normalmapUniformLocation = glGetUniformLocation(programID, "normalMap");
+	glUniform1i(normalmapUniformLocation, 1);
+
 	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 cubeModelToWorldMatrix = 
@@ -332,7 +351,8 @@ void MeGlWindow::paintGL()
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	glBindVertexArray(sphereVertexArrayObjectID);
-	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f);
+	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f) *
+		glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));
 	fullTransformMatrix = World2ProjectionMatrix * sphereModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &sphereModelToWorldMatrix[0][0]);

@@ -2,7 +2,6 @@
 
 in vec3 normalWorld;
 in vec3 vertexPositionWorld;
-in vec2 textureCoordinate;
 
 uniform vec3 lightPositionWorld;
 uniform vec4 ambientLight;
