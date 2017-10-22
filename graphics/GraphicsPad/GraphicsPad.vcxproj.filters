@@ -19,5 +19,7 @@
     <None Include="GraphicsPad.VC.db" />
     <None Include="LightVertexShaderCode.glsl" />
     <None Include="LightFragmentShaderCode.glsl" />
+    <None Include="PlaneTextureVertexShaderCode.glsl" />
+    <None Include="PlaneTextureFragmentShaderCode.glsl" />
   </ItemGroup>
 </Project>

@@ -7,7 +7,7 @@ in vec2 textureCoordinate;
 uniform vec3 lightPositionWorld;
 uniform vec4 ambientLight;
 uniform vec3 eyePositionWorld;
-uniform sampler2D myTexture;
+
 
 out vec4 daColor;
 void main()
@@ -15,9 +15,9 @@ void main()
 	// Diffuse
 	vec3 lightVectorWorld = normalize(lightPositionWorld - vertexPositionWorld);
 	float brightness = clamp(dot(lightVectorWorld, normalize(normalWorld)), 0, 1);
-	vec4 texColor = texture(myTexture, textureCoordinate);
-	vec4 diffuseLight = brightness * texColor;
-
+	//vec4 texColor = texture(myTexture, textureCoordinate);
+	vec4 diffuseLight = vec4(brightness, brightness, brightness, 1.0);
+		
 	// Specular
 	vec3 reflectedLightVectorWorld = reflect(-lightVectorWorld, normalWorld);
 	vec3 eyeVectorWorld = normalize(eyePositionWorld - vertexPositionWorld);

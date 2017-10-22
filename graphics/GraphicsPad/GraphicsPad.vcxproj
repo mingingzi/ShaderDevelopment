@@ -163,6 +163,8 @@
     <None Include="GraphicsPad.VC.db" />
     <None Include="LightFragmentShaderCode.glsl" />
     <None Include="LightVertexShaderCode.glsl" />
+    <None Include="PlaneTextureFragmentShaderCode.glsl" />
+    <None Include="PlaneTextureVertexShaderCode.glsl" />
     <None Include="VertexShaderCode.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

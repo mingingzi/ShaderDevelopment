@@ -18,6 +18,7 @@ using glm::mat4;
 
 GLuint programID;
 GLuint lightProgramID;
+GLuint planeTextureProgramID;
 
 GLuint cubeSizeofVerts;
 GLuint planeSizeofVerts;
@@ -222,6 +223,26 @@ void installShaders()
 	glAttachShader(lightProgramID, vertexShaderID);
 	glAttachShader(lightProgramID, fragmentShaderID);
 	glLinkProgram(lightProgramID);
+	glDeleteShader(vertexShaderID);
+	glDeleteShader(fragmentShaderID);
+
+	// Plane Texture Shader
+	temp = readShaderCode("PlaneTextureVertexShaderCode.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(vertexShaderID, 1, adapter, 0);
+	temp = readShaderCode("PlaneTextureFragmentShaderCode.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(fragmentShaderID, 1, adapter, 0);
+
+	glCompileShader(vertexShaderID);
+	glCompileShader(fragmentShaderID);
+
+	planeTextureProgramID = glCreateProgram();
+	glAttachShader(planeTextureProgramID, vertexShaderID);
+	glAttachShader(planeTextureProgramID, fragmentShaderID);
+	glLinkProgram(planeTextureProgramID);
+	glDeleteShader(vertexShaderID);
+	glDeleteShader(fragmentShaderID);
 }
 
 
@@ -252,7 +273,6 @@ void MeGlWindow::paintGL()
 	if (yAngle > 360.0f) yAngle -= 360.0f;
 
 	// Matrix Setup
-	glUseProgram(programID);
 	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
 	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 20.0f);
 	glm::mat4 World2ProjectionMatrix = viewToProjectionMatrix  * worldToViewMatrix;
@@ -260,9 +280,10 @@ void MeGlWindow::paintGL()
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
+	// Major Shader (Shader1)
+	glUseProgram(programID);
 	// Lighting Setup
-	glm::vec4 ambientLight(0.2f, 0.2f, 0.2f, 1.0f);
-	
+	glm::vec4 ambientLight = glm::vec4(0.05f, 0.05f, 0.05f, 1.0f);
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
 	
@@ -275,7 +296,7 @@ void MeGlWindow::paintGL()
 	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
 
 	// Texture Setup
-	const char* texName = "blueBird.png";
+	const char* texName = "cube_uvtex.png";
 	QImage texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
 	glActiveTexture(GL_TEXTURE0);
 	GLuint textureBufferID;
@@ -300,6 +321,16 @@ void MeGlWindow::paintGL()
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 
 	// Sphere1
+	// Texture Setup
+	texName = "Glass_Diffuse.png";
+	texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &textureBufferID);
+	glBindTexture(GL_TEXTURE_2D, textureBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width(), texture.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
 	glBindVertexArray(sphereVertexArrayObjectID);
 	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f);
 	fullTransformMatrix = World2ProjectionMatrix * sphereModelToWorldMatrix;
@@ -307,18 +338,33 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &sphereModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, sphereNumIndices, GL_UNSIGNED_SHORT, (void*)sphereSizeofVerts);
 
-	// Base Plane
-	glBindTexture(GL_TEXTURE_2D, 0);
+
+
+	// Base Plane(Shader2)
+	glUseProgram(planeTextureProgramID);
+	// Lighting Setup
+	ambientLightUniformLocation = glGetUniformLocation(planeTextureProgramID, "ambientLight");
+	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
+	lightPositionUniformLocation = glGetUniformLocation(planeTextureProgramID, "lightPositionWorld");
+	glUniform3fv(lightPositionUniformLocation, 1, &lightPosition[0]);
+
+	// Camera Setup
+	eyePositionWorldUniformLocation = glGetUniformLocation(planeTextureProgramID, "eyePositionWorld");
+	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
+
 	glBindVertexArray(planeVertexArrayObjectID);
 	mat4 planeModelToWorldMatrix =
 		glm::translate(0.0f, 0.0f, -10.0f) *
 		glm::rotate(30.0f, vec3(1.0f, 0.0f, 0.0f));
-	fullTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
-	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
-	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
+	GLuint planeTextureTransformMatrixUniformLocation = glGetUniformLocation(planeTextureProgramID, "planeTextureTransformMatrix");
+	GLuint planeTextureM2WMatrixUniformLocation = glGetUniformLocation(planeTextureProgramID, "planeModelToWorldMatrix");
+	mat4 planeTextureTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
+	glUniformMatrix4fv(planeTextureTransformMatrixUniformLocation, 1, GL_FALSE, &planeTextureTransformMatrix[0][0]);
+	glUniformMatrix4fv(planeTextureM2WMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 
-	// Light Placeholder
+
+	// Light Placeholder(Shader3)
 	glUseProgram(lightProgramID);
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 lightModelToWorldMatrix =
