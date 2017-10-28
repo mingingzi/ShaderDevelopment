@@ -10,7 +10,9 @@ protected:
 	void paintGL();
 	void mouseMoveEvent(QMouseEvent*);
 	void keyPressEvent(QKeyEvent*);
+	void loadCubemap();
 
+	static const char* TexFile[];
 	QTimer	*Mytimer;
 public:
 };

@@ -159,6 +159,8 @@
     <ClInclude Include="Primitives\ShapeGenerator.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="CubemapFragmentShader.glsl" />
+    <None Include="CubemapVertexShader.glsl" />
     <None Include="FragmentShaderCode.glsl" />
     <None Include="GraphicsPad.VC.db" />
     <None Include="LightFragmentShaderCode.glsl" />

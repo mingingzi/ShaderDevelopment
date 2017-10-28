@@ -21,5 +21,7 @@
     <None Include="LightFragmentShaderCode.glsl" />
     <None Include="PlaneTextureVertexShaderCode.glsl" />
     <None Include="PlaneTextureFragmentShaderCode.glsl" />
+    <None Include="CubemapVertexShader.glsl" />
+    <None Include="CubemapFragmentShader.glsl" />
   </ItemGroup>
 </Project>
