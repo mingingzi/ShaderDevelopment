@@ -41,6 +41,49 @@ glm::vec3 lightPosition(0.0f, 0.0f, -4.0f);
 // bottom and top are switched
 const char* MeGlWindow::TexFile[] = { "texture/right.png","texture/left.png","texture/bottom.png","texture/top.png","texture/back.png","texture/front.png" };
 
+void textureSetup() {
+	// Texture cube
+	const char* texName = "texture/blueBird.png";
+	QImage texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
+	glActiveTexture(GL_TEXTURE0);
+	GLuint textureBufferID;
+	glGenTextures(1, &textureBufferID);
+	glBindTexture(GL_TEXTURE_2D, textureBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width(), texture.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// Texture sphere
+	texName = "texture/Glass_Diffuse.png";
+	texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
+	glActiveTexture(GL_TEXTURE3);
+	glGenTextures(1, &textureBufferID);
+	glBindTexture(GL_TEXTURE_2D, textureBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width(), texture.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// Normal Setup
+	const char* normalMapName = "texture/Shapes.png";
+	QImage Normalmap = QGLWidget::convertToGLFormat(QImage(normalMapName, "PNG"));
+	glActiveTexture(GL_TEXTURE1);
+	GLuint NormalBufferID;
+	glGenTextures(1, &NormalBufferID);
+	glBindTexture(GL_TEXTURE_2D, NormalBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Normalmap.width(), Normalmap.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, Normalmap.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// Normal sphere
+	normalMapName = "texture/Shapes.png";
+	Normalmap = QGLWidget::convertToGLFormat(QImage(normalMapName, "PNG"));
+	glActiveTexture(GL_TEXTURE4);
+	glGenTextures(1, &NormalBufferID);
+	glBindTexture(GL_TEXTURE_2D, NormalBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Normalmap.width(), Normalmap.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, Normalmap.bits());
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+}
 void sendDataToOpenGL()
 {
 	ShapeData cube = ShapeGenerator::makeCube();
@@ -292,6 +335,7 @@ void MeGlWindow::initializeGL()
 {
 	glewInit();
 	glEnable(GL_DEPTH_TEST);
+	textureSetup();
 	sendDataToOpenGL();
 	installShaders();
 	loadCubemap();
@@ -326,7 +370,7 @@ void MeGlWindow::paintGL()
 	// Major Shader (Shader1)
 	glUseProgram(programID);
 	// Lighting Setup
-	glm::vec4 ambientLight = glm::vec4(0.05f, 0.05f, 0.05f, 1.0f);
+	glm::vec4 ambientLight = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
 	
@@ -338,64 +382,32 @@ void MeGlWindow::paintGL()
 	glm::vec3 eyePosition = camera.getPosition();
 	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
 
-	// Texture Setup
-	const char* texName = "texture/blueBird.png";
-	QImage texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
-	glActiveTexture(GL_TEXTURE0);
-	GLuint textureBufferID;
-	glGenTextures(1, &textureBufferID);
-	glBindTexture(GL_TEXTURE_2D, textureBufferID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width(), texture.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.bits());
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
+	
+	// Texture
 	GLint textureUniformLocation = glGetUniformLocation(programID, "myTexture");
-	glUniform1i(textureUniformLocation, 0);
+	glUniform1i(textureUniformLocation, 0);	
 
 	// Normal Setup
-	const char* normalMapName = "texture/cube_uvtex_normal.png";
-	QImage Normalmap = QGLWidget::convertToGLFormat(QImage(normalMapName, "PNG"));
-	glActiveTexture(GL_TEXTURE1);
-	GLuint NormalBufferID;
-	glGenTextures(1, &NormalBufferID);
-	glBindTexture(GL_TEXTURE_2D, NormalBufferID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Normalmap.width(), Normalmap.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, Normalmap.bits());
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	GLint normalmapUniformLocation = glGetUniformLocation(programID, "normalMap");
 	glUniform1i(normalmapUniformLocation, 1);
 
 	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
-	mat4 cubeModelToWorldMatrix = 
+	mat4 cubeModelToWorldMatrix =
 		glm::translate(-3.0f, 0.5f, -8.0f) *
-		glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f)) *
-		glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));
+		glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f));
+		/*glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f)) *
+		glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));*/
 	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &cubeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
 
 	// Sphere1
-	// Texture Setup
-	texName = "texture/Glass_Diffuse.png";
-	texture = QGLWidget::convertToGLFormat(QImage(texName, "PNG"));
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &textureBufferID);
-	glBindTexture(GL_TEXTURE_2D, textureBufferID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture.width(), texture.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.bits());
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
+	// texture
+	glUniform1i(textureUniformLocation, 3);
 	// Normal Setup
-	normalMapName = "texture/Glass_Normal.png";
-	Normalmap = QGLWidget::convertToGLFormat(QImage(normalMapName, "PNG"));
-	glActiveTexture(GL_TEXTURE1);
-	glGenTextures(1, &NormalBufferID);
-	glBindTexture(GL_TEXTURE_2D, NormalBufferID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Normalmap.width(), Normalmap.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, Normalmap.bits());
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glUniform1i(normalmapUniformLocation, 4);
 
 	glBindVertexArray(sphereVertexArrayObjectID);
 	mat4 sphereModelToWorldMatrix = glm::translate(1.0f, 0.0f, -8.0f) *
@@ -404,7 +416,6 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &sphereModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, sphereNumIndices, GL_UNSIGNED_SHORT, (void*)sphereSizeofVerts);
-
 
 
 	// Base Plane(Shader2)

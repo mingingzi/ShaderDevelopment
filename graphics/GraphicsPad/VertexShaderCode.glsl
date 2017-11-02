@@ -12,6 +12,7 @@ uniform mat4 modelToWorldMatrix ;
 out vec3 vertexPositionWorld;
 out vec2 textureCoordinate;
 out mat4 tangentToModelTransform;
+out vec3 normalModelVertex;
 
 void main()
 {
@@ -20,4 +21,5 @@ void main()
 	textureCoordinate = uv;
 	vec3 bitangentVector = normalize(cross(normalModel,vec3(tangent)) * tangent.w);
  	tangentToModelTransform = mat4(vec4(vec3(tangent),0.0),vec4(bitangentVector,0.0),vec4(normalModel,0.0),vec4(position,1.0));
+	normalModelVertex = normalModel;
 }
