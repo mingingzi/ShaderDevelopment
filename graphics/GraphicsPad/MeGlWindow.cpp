@@ -20,6 +20,7 @@ GLuint programID;
 GLuint lightProgramID;
 GLuint planeTextureProgramID;
 GLuint cubemapProgramID;
+GLuint shadowProgramID;
 
 GLuint cubeSizeofVerts;
 GLuint planeSizeofVerts;
@@ -34,9 +35,14 @@ GLuint cubeNumIndices;
 GLuint planeNumIndices;
 GLuint sphereNumIndices;
 
+GLuint frameBufferID;
+GLuint shadowMapBufferID;
+GLuint shadowFBOBufferID;
 
 GLfloat yAngle = 0.0f;
 Camera camera;
+Camera lightCamera;
+
 glm::vec3 lightPosition(0.0f, 0.0f, -4.0f);
 // bottom and top are switched
 const char* MeGlWindow::TexFile[] = { "texture/right.png","texture/left.png","texture/bottom.png","texture/top.png","texture/back.png","texture/front.png" };
@@ -63,7 +69,7 @@ void textureSetup() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	// Normal Setup
+	// Normal cube
 	const char* normalMapName = "texture/Shapes.png";
 	QImage Normalmap = QGLWidget::convertToGLFormat(QImage(normalMapName, "PNG"));
 	glActiveTexture(GL_TEXTURE1);
@@ -84,6 +90,32 @@ void textureSetup() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
+
+void MeGlWindow::shadowSetup()
+{
+	glActiveTexture(GL_TEXTURE3);
+
+	glGenFramebuffers(1, &frameBufferID);
+	glBindBuffer(GL_FRAMEBUFFER, frameBufferID);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glDrawBuffer(GL_DEPTH_ATTACHMENT);
+
+	glGenTextures(1, &shadowMapBufferID);
+	glBindTexture(GL_TEXTURE_2D, shadowMapBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width(), height(), 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, FrameTextureID, 0);
+
+	glActiveTexture(GL_TEXTURE4);
+	glGenTextures(1, &shadowFBOBufferID);
+	glBindTexture(GL_TEXTURE_2D, shadowFBOBufferID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width(), height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, FrameDepthID, 0);
+}
+
 void sendDataToOpenGL()
 {
 	ShapeData cube = ShapeGenerator::makeCube();
@@ -261,10 +293,10 @@ void installShaders()
 	glDeleteShader(fragmentShaderID);
 
 	// Cubemap Shader
-	temp = readShaderCode("CubemapVertexShader.glsl");
+	temp = readShaderCode("shader/CubemapVertexShader.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(vertexShaderID, 1, adapter, 0);
-	temp = readShaderCode("CubemapFragmentShader.glsl");
+	temp = readShaderCode("shader/CubemapFragmentShader.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(fragmentShaderID, 1, adapter, 0);
 
@@ -279,10 +311,10 @@ void installShaders()
 	glDeleteShader(fragmentShaderID);
 
 	// Light Placeholder Shader
-	temp = readShaderCode("LightVertexShaderCode.glsl");
+	temp = readShaderCode("shader/LightVertexShaderCode.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(vertexShaderID, 1, adapter, 0);
-	temp = readShaderCode("LightFragmentShaderCode.glsl");
+	temp = readShaderCode("shader/LightFragmentShaderCode.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(fragmentShaderID, 1, adapter, 0);
 
@@ -313,6 +345,24 @@ void installShaders()
 	glLinkProgram(planeTextureProgramID);
 	glDeleteShader(vertexShaderID);
 	glDeleteShader(fragmentShaderID);
+
+	// Shadow Map Shader
+	temp = readShaderCode("shader/ShadowMapVertexShader.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(vertexShaderID, 1, adapter, 0);
+	temp = readShaderCode("shader/ShadowMapFragmentShader.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(fragmentShaderID, 1, adapter, 0);
+
+	glCompileShader(vertexShaderID);
+	glCompileShader(fragmentShaderID);
+
+	shadowProgramID = glCreateProgram();
+	glAttachShader(shadowProgramID, vertexShaderID);
+	glAttachShader(shadowProgramID, fragmentShaderID);
+	glLinkProgram(shadowProgramID);
+	glDeleteShader(vertexShaderID);
+	glDeleteShader(fragmentShaderID);
 }
 
 void MeGlWindow::loadCubemap() {
@@ -329,6 +379,7 @@ void MeGlWindow::loadCubemap() {
 	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
 void MeGlWindow::initializeGL()
@@ -336,12 +387,14 @@ void MeGlWindow::initializeGL()
 	glewInit();
 	glEnable(GL_DEPTH_TEST);
 	textureSetup();
+	//shadowSetup();
 	sendDataToOpenGL();
 	installShaders();
 	loadCubemap();
 	this->setFixedWidth(1600);
 	this->setFixedHeight(1000);
 
+	//pass1Index = glGetSubroutineIndex(shadowProgramID, GL_FRAGMENT_SHADER, "recordDepth");
 	//Timer Setup
 	Mytimer = new QTimer(this);
 	connect(Mytimer, SIGNAL(timeout()), this, SLOT(update()));
@@ -352,9 +405,18 @@ void MeGlWindow::initializeGL()
 
 void MeGlWindow::paintGL()
 {
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, width(), height());
-	
+
+	// Render to Shadow Map
+	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	/*glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowMapBufferID, 0);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowFBOBufferID, 0);
+	GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+	assert(status == GL_FRAMEBUFFER_COMPLETE);*/
+
+	lightCamera.setPosition(lightPosition);// Light Camera
+
 	// Change with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
@@ -367,13 +429,14 @@ void MeGlWindow::paintGL()
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
+	
+
 	// Major Shader (Shader1)
 	glUseProgram(programID);
 	// Lighting Setup
 	glm::vec4 ambientLight = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 	GLint ambientLightUniformLocation = glGetUniformLocation(programID, "ambientLight");
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
-	
 	GLint lightPositionUniformLocation = glGetUniformLocation(programID, "lightPositionWorld");
 	glUniform3fv(lightPositionUniformLocation, 1, &lightPosition[0]);
 
@@ -381,15 +444,17 @@ void MeGlWindow::paintGL()
 	GLint eyePositionWorldUniformLocation = glGetUniformLocation(programID, "eyePositionWorld");
 	glm::vec3 eyePosition = camera.getPosition();
 	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
-
+	
 	
 	// Texture
 	GLint textureUniformLocation = glGetUniformLocation(programID, "myTexture");
 	glUniform1i(textureUniformLocation, 0);	
-
 	// Normal Setup
 	GLint normalmapUniformLocation = glGetUniformLocation(programID, "normalMap");
 	glUniform1i(normalmapUniformLocation, 1);
+	// CubeMap Setup
+	GLint CubeMapUniformLocation = glGetUniformLocation(programID, "cubemap");
+	glUniform1i(CubeMapUniformLocation, 2);
 
 	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
@@ -458,9 +523,9 @@ void MeGlWindow::paintGL()
 
 	// CubeMap
 	glUseProgram(cubemapProgramID);
-	GLint CubeMapUniformLocation = glGetUniformLocation(cubemapProgramID, "cubemap");
+	CubeMapUniformLocation = glGetUniformLocation(cubemapProgramID, "cubemap");
 	glUniform1i(CubeMapUniformLocation, 2);
-	
+
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 cubemapModelToWorldMatrix = glm::scale(70.0f, 70.0f, 70.0f);
 	// Cubemap doesn't move with camera

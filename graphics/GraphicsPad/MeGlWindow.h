@@ -11,9 +11,10 @@ protected:
 	void mouseMoveEvent(QMouseEvent*);
 	void keyPressEvent(QKeyEvent*);
 	void loadCubemap();
-
+	void shadowSetup();
 	static const char* TexFile[];
 	QTimer	*Mytimer;
+	GLuint pass1Index;
 public:
 };
 
