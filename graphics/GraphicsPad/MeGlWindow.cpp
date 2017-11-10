@@ -35,9 +35,9 @@ GLuint cubeNumIndices;
 GLuint planeNumIndices;
 GLuint sphereNumIndices;
 
-GLuint frameBufferID;
-GLuint shadowMapBufferID;
-GLuint shadowFBOBufferID;
+GLuint fboHandle;
+GLuint renderTex;
+GLuint frameDepthID;
 
 GLfloat yAngle = 0.0f;
 Camera camera;
@@ -93,27 +93,28 @@ void textureSetup() {
 
 void MeGlWindow::shadowSetup()
 {
-	glActiveTexture(GL_TEXTURE3);
-
-	glGenFramebuffers(1, &frameBufferID);
-	glBindBuffer(GL_FRAMEBUFFER, frameBufferID);
+	glActiveTexture(GL_TEXTURE6); // Use texture unit 6
+	// Generate and bind the framebuffer
+	glGenFramebuffers(1, &fboHandle);
+	glBindFramebuffer(GL_FRAMEBUFFER, fboHandle);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	glDrawBuffer(GL_DEPTH_ATTACHMENT);
 
-	glGenTextures(1, &shadowMapBufferID);
-	glBindTexture(GL_TEXTURE_2D, shadowMapBufferID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width(), height(), 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, FrameTextureID, 0);
+	// Create the texture object
+	glGenTextures(1, &renderTex);
+	glBindTexture(GL_TEXTURE_2D, renderTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(), height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
 
-	glActiveTexture(GL_TEXTURE4);
-	glGenTextures(1, &shadowFBOBufferID);
-	glBindTexture(GL_TEXTURE_2D, shadowFBOBufferID);
+
+	glActiveTexture(GL_TEXTURE5);
+	glGenTextures(1, &frameDepthID);
+	glBindTexture(GL_TEXTURE_2D, frameDepthID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width(), height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, FrameDepthID, 0);
 }
 
 void sendDataToOpenGL()
@@ -384,17 +385,17 @@ void MeGlWindow::loadCubemap() {
 
 void MeGlWindow::initializeGL()
 {
+	this->setFixedWidth(1600);
+	this->setFixedHeight(1000);
 	glewInit();
 	glEnable(GL_DEPTH_TEST);
 	textureSetup();
-	//shadowSetup();
+	shadowSetup();
 	sendDataToOpenGL();
 	installShaders();
 	loadCubemap();
-	this->setFixedWidth(1600);
-	this->setFixedHeight(1000);
+	
 
-	//pass1Index = glGetSubroutineIndex(shadowProgramID, GL_FRAGMENT_SHADER, "recordDepth");
 	//Timer Setup
 	Mytimer = new QTimer(this);
 	connect(Mytimer, SIGNAL(timeout()), this, SLOT(update()));
@@ -405,18 +406,43 @@ void MeGlWindow::initializeGL()
 
 void MeGlWindow::paintGL()
 {
-	glViewport(0, 0, width(), height());
+	// Bind to texture's FBO
+	glBindFramebuffer(GL_FRAMEBUFFER, fboHandle);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, frameDepthID, 0);
 
-	// Render to Shadow Map
-	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBufferID);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	/*glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowMapBufferID, 0);
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowFBOBufferID, 0);
-	GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
-	assert(status == GL_FRAMEBUFFER_COMPLETE);*/
+	renderCamera(camera);
 
-	lightCamera.setPosition(lightPosition);// Light Camera
+	// Unbind texture's FBO (back to default FB)
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, width(), height()); // Viewport for main window
 
+	renderCamera(camera);
+
+	// Scene matrix setup
+	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
+	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 140.0f);
+	glm::mat4 World2ProjectionMatrix = viewToProjectionMatrix  * worldToViewMatrix;
+	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(shadowProgramID, "fullTransformMatrix");
+
+	// Use the render texture to draw a cube
+	glUseProgram(shadowProgramID);
+	GLuint rendertoTextureUniformLocation = glGetUniformLocation(shadowProgramID, "myTexture");
+	glUniform1i(rendertoTextureUniformLocation, 6);
+
+	glBindVertexArray(cubeVertexArrayObjectID);
+	mat4 cubeModelToWorldMatrix =
+		glm::translate(-1.0f, 2.0f, -10.0f);
+	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
+	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
+
+	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
+}
+
+void MeGlWindow::renderCamera(Camera &camera) {
 	// Change with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
@@ -429,7 +455,6 @@ void MeGlWindow::paintGL()
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
 	GLint modelToWorldMatrixUniformLocation = glGetUniformLocation(programID, "modelToWorldMatrix");
 
-	
 
 	// Major Shader (Shader1)
 	glUseProgram(programID);
@@ -444,11 +469,11 @@ void MeGlWindow::paintGL()
 	GLint eyePositionWorldUniformLocation = glGetUniformLocation(programID, "eyePositionWorld");
 	glm::vec3 eyePosition = camera.getPosition();
 	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
-	
-	
+
+
 	// Texture
 	GLint textureUniformLocation = glGetUniformLocation(programID, "myTexture");
-	glUniform1i(textureUniformLocation, 0);	
+	glUniform1i(textureUniformLocation, 0);
 	// Normal Setup
 	GLint normalmapUniformLocation = glGetUniformLocation(programID, "normalMap");
 	glUniform1i(normalmapUniformLocation, 1);
@@ -461,8 +486,8 @@ void MeGlWindow::paintGL()
 	mat4 cubeModelToWorldMatrix =
 		glm::translate(-3.0f, 0.5f, -8.0f) *
 		glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f));
-		/*glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f)) *
-		glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));*/
+	/*glm::rotate(45.0f, vec3(1.0f, 0.0f, 0.0f)) *
+	glm::rotate(yAngle, vec3(-1.0f, -1.0f, 1.0f));*/
 	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 	glUniformMatrix4fv(modelToWorldMatrixUniformLocation, 1, GL_FALSE, &cubeModelToWorldMatrix[0][0]);
@@ -512,7 +537,7 @@ void MeGlWindow::paintGL()
 	glUseProgram(lightProgramID);
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 lightModelToWorldMatrix =
-		glm::translate(lightPosition) * 
+		glm::translate(lightPosition) *
 		glm::scale(0.08f, 0.08f, 0.08f);
 	GLuint LightTransformMatrixUniformLocation = glGetUniformLocation(lightProgramID, "lightTransformMatrix");
 	mat4 lightTransformMatrix = World2ProjectionMatrix  *  lightModelToWorldMatrix;

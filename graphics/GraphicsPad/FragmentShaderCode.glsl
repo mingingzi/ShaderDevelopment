@@ -49,5 +49,5 @@ void main()
 	float attenuation = 1.0 / (1.0 + 0.1 * pow(distanceToLight, 2));
 
 	vec4 materialColor = ambientLight + attenuation * (diffuseLight + specularLight);
-	daColor = mix(materialColor, cubeMapColor, 0.5);
+	daColor = mix(materialColor, cubeMapColor, 1.0); // Cubemap reflection factor
 }
