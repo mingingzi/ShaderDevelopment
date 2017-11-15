@@ -89,7 +89,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Middleware\Qt\include;$(ProjectDir)..\Middleware\glew\include;$(ProjectDir)..\Middleware\glm</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\Middleware\Qt\include;$(ProjectDir)..\Middleware\glew\include;$(ProjectDir)..\Middleware\glm;$(ProjectDir)..\Engine</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -167,8 +167,10 @@
     <None Include="LightVertexShaderCode.glsl" />
     <None Include="PlaneTextureFragmentShaderCode.glsl" />
     <None Include="PlaneTextureVertexShaderCode.glsl" />
-    <None Include="shader\ShadowMapFragmentShader.glsl" />
-    <None Include="shader\ShadowMapVertexShader.glsl" />
+    <None Include="shader\ReceiveShadowFragmentShader.glsl" />
+    <None Include="shader\ReceiveShadowVertexShader.glsl" />
+    <None Include="shader\RendertoTextureFragmentShader.glsl" />
+    <None Include="shader\RendertoTextureVertexShader.glsl" />
     <None Include="VertexShaderCode.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

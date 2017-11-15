@@ -20,7 +20,8 @@ GLuint programID;
 GLuint lightProgramID;
 GLuint planeTextureProgramID;
 GLuint cubemapProgramID;
-GLuint shadowProgramID;
+GLuint rendertoTextureProgramID;
+GLuint receiveShadowProgramID;
 
 GLuint cubeSizeofVerts;
 GLuint planeSizeofVerts;
@@ -44,6 +45,7 @@ Camera camera;
 Camera lightCamera;
 
 glm::vec3 lightPosition(0.0f, 0.0f, -4.0f);
+GLfloat fresnelScale = 0.5f;
 // bottom and top are switched
 const char* MeGlWindow::TexFile[] = { "texture/right.png","texture/left.png","texture/bottom.png","texture/top.png","texture/back.png","texture/front.png" };
 
@@ -106,8 +108,6 @@ void MeGlWindow::shadowSetup()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(), height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
-
 
 	glActiveTexture(GL_TEXTURE5);
 	glGenTextures(1, &frameDepthID);
@@ -348,20 +348,38 @@ void installShaders()
 	glDeleteShader(fragmentShaderID);
 
 	// Shadow Map Shader
-	temp = readShaderCode("shader/ShadowMapVertexShader.glsl");
+	temp = readShaderCode("shader/RendertoTextureVertexShader.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(vertexShaderID, 1, adapter, 0);
-	temp = readShaderCode("shader/ShadowMapFragmentShader.glsl");
+	temp = readShaderCode("shader/RendertoTextureFragmentShader.glsl");
 	adapter[0] = temp.c_str();
 	glShaderSource(fragmentShaderID, 1, adapter, 0);
 
 	glCompileShader(vertexShaderID);
 	glCompileShader(fragmentShaderID);
 
-	shadowProgramID = glCreateProgram();
-	glAttachShader(shadowProgramID, vertexShaderID);
-	glAttachShader(shadowProgramID, fragmentShaderID);
-	glLinkProgram(shadowProgramID);
+	rendertoTextureProgramID = glCreateProgram();
+	glAttachShader(rendertoTextureProgramID, vertexShaderID);
+	glAttachShader(rendertoTextureProgramID, fragmentShaderID);
+	glLinkProgram(rendertoTextureProgramID);
+	glDeleteShader(vertexShaderID);
+	glDeleteShader(fragmentShaderID);
+
+	// Receive Shadow Shader
+	temp = readShaderCode("shader/ReceiveShadowVertexShader.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(vertexShaderID, 1, adapter, 0);
+	temp = readShaderCode("shader/ReceiveShadowFragmentShader.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(fragmentShaderID, 1, adapter, 0);
+
+	glCompileShader(vertexShaderID);
+	glCompileShader(fragmentShaderID);
+
+	receiveShadowProgramID = glCreateProgram();
+	glAttachShader(receiveShadowProgramID, vertexShaderID);
+	glAttachShader(receiveShadowProgramID, fragmentShaderID);
+	glLinkProgram(receiveShadowProgramID);
 	glDeleteShader(vertexShaderID);
 	glDeleteShader(fragmentShaderID);
 }
@@ -413,33 +431,67 @@ void MeGlWindow::paintGL()
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderTex, 0);
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, frameDepthID, 0);
 
-	renderCamera(camera);
+	lightCamera.setPosition(lightPosition);
+	renderCamera(lightCamera);
 
 	// Unbind texture's FBO (back to default FB)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, width(), height()); // Viewport for main window
-
+	GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+	assert(status == GL_FRAMEBUFFER_COMPLETE);
 	renderCamera(camera);
 
 	// Scene matrix setup
 	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
 	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 140.0f);
-	glm::mat4 World2ProjectionMatrix = viewToProjectionMatrix  * worldToViewMatrix;
-	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(shadowProgramID, "fullTransformMatrix");
+	glm::mat4 World2ProjectionMatrix = viewToProjectionMatrix * worldToViewMatrix;
+	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(rendertoTextureProgramID, "fullTransformMatrix");
 
 	// Use the render texture to draw a cube
-	glUseProgram(shadowProgramID);
-	GLuint rendertoTextureUniformLocation = glGetUniformLocation(shadowProgramID, "myTexture");
+	glUseProgram(rendertoTextureProgramID);
+	GLuint rendertoTextureUniformLocation = glGetUniformLocation(rendertoTextureProgramID, "myTexture");
 	glUniform1i(rendertoTextureUniformLocation, 6);
 
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 cubeModelToWorldMatrix =
-		glm::translate(-1.0f, 2.0f, -10.0f);
+		glm::translate(-1.0f, 2.0f, -15.0f);
 	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 
 	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
+
+	// Base Plane(Shader2)
+	glUseProgram(receiveShadowProgramID);
+	// Lighting Setup
+	glm::vec4 ambientLight = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+
+	GLuint ambientLightUniformLocation = glGetUniformLocation(receiveShadowProgramID, "ambientLight");
+	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
+	GLuint lightPositionUniformLocation = glGetUniformLocation(receiveShadowProgramID, "lightPositionWorld");
+	glUniform3fv(lightPositionUniformLocation, 1, &lightPosition[0]);
+	glm::mat4 LightWorld2ProjectionMatrix = viewToProjectionMatrix * lightCamera.getWorldToViewMatrix();
+	GLint LightFullTransformMatrixUniformLocaiton = glGetUniformLocation(receiveShadowProgramID, "LightFullTransformMatrix");
+	glUniformMatrix4fv(LightFullTransformMatrixUniformLocaiton, 1, GL_FALSE, &LightWorld2ProjectionMatrix[0][0]);
+
+	// Camera Setup
+	glm::vec3 eyePosition = camera.getPosition();
+	GLuint eyePositionWorldUniformLocation = glGetUniformLocation(receiveShadowProgramID, "eyePositionWorld");
+	glUniform3fv(eyePositionWorldUniformLocation, 1, &eyePosition[0]);
+
+	GLuint shadowMapUniformLocation = glGetUniformLocation(receiveShadowProgramID, "shadowMap");
+	glUniform1i(shadowMapUniformLocation, 5);
+
+	glBindVertexArray(planeVertexArrayObjectID);
+	mat4 planeModelToWorldMatrix =
+		glm::translate(0.0f, -1.0f, -15.0f) *
+		glm::rotate(10.0f, vec3(1.0f, 0.0f, 0.0f));
+	GLuint planeTextureTransformMatrixUniformLocation = glGetUniformLocation(receiveShadowProgramID, "fullTransformMatrix");
+	GLuint planeTextureM2WMatrixUniformLocation = glGetUniformLocation(receiveShadowProgramID, "planeM2WTransformMatrix");
+	mat4 planeTextureTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
+	glUniformMatrix4fv(planeTextureTransformMatrixUniformLocation, 1, GL_FALSE, &planeTextureTransformMatrix[0][0]);
+	glUniformMatrix4fv(planeTextureM2WMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 }
 
 void MeGlWindow::renderCamera(Camera &camera) {
@@ -464,6 +516,9 @@ void MeGlWindow::renderCamera(Camera &camera) {
 	glUniform4fv(ambientLightUniformLocation, 1, &ambientLight[0]);
 	GLint lightPositionUniformLocation = glGetUniformLocation(programID, "lightPositionWorld");
 	glUniform3fv(lightPositionUniformLocation, 1, &lightPosition[0]);
+	GLint fresnelScaleUniformLocation = glGetUniformLocation(programID, "fresnelScale");
+	glUniform1f(fresnelScaleUniformLocation, fresnelScale);
+
 
 	// Camera Setup
 	GLint eyePositionWorldUniformLocation = glGetUniformLocation(programID, "eyePositionWorld");
@@ -522,14 +577,14 @@ void MeGlWindow::renderCamera(Camera &camera) {
 
 	glBindVertexArray(planeVertexArrayObjectID);
 	mat4 planeModelToWorldMatrix =
-		glm::translate(0.0f, -1.0f, -10.0f) *
+		glm::translate(0.0f, -1.0f, -15.0f) *
 		glm::rotate(10.0f, vec3(1.0f, 0.0f, 0.0f));
 	GLuint planeTextureTransformMatrixUniformLocation = glGetUniformLocation(planeTextureProgramID, "planeTextureTransformMatrix");
 	GLuint planeTextureM2WMatrixUniformLocation = glGetUniformLocation(planeTextureProgramID, "planeModelToWorldMatrix");
 	mat4 planeTextureTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
 	glUniformMatrix4fv(planeTextureTransformMatrixUniformLocation, 1, GL_FALSE, &planeTextureTransformMatrix[0][0]);
 	glUniformMatrix4fv(planeTextureM2WMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
-	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
+	//glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 
 
 
