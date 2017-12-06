@@ -13,7 +13,7 @@ protected:
 	void keyPressEvent(QKeyEvent*);
 	void loadCubemap();
 	void shadowSetup();
-	void renderCamera(Camera &camera);
+	void renderCamera(Camera &camera, GLuint programID);
 	static const char* TexFile[];
 	QTimer	*Mytimer;
 	GLuint pass1Index;

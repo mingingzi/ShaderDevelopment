@@ -22,6 +22,8 @@ GLuint planeTextureProgramID;
 GLuint cubemapProgramID;
 GLuint rendertoTextureProgramID;
 GLuint receiveShadowProgramID;
+GLuint edgeDetectionProgramID;
+
 
 GLuint cubeSizeofVerts;
 GLuint planeSizeofVerts;
@@ -44,7 +46,7 @@ GLfloat yAngle = 0.0f;
 Camera camera;
 Camera lightCamera;
 
-glm::vec3 lightPosition(0.0f, 0.0f, -4.0f);
+glm::vec3 lightPosition(0.0f, 0.0f, 0.0f);
 GLfloat fresnelScale = 0.5f;
 // bottom and top are switched
 const char* MeGlWindow::TexFile[] = { "texture/right.png","texture/left.png","texture/bottom.png","texture/top.png","texture/back.png","texture/front.png" };
@@ -382,6 +384,24 @@ void installShaders()
 	glLinkProgram(receiveShadowProgramID);
 	glDeleteShader(vertexShaderID);
 	glDeleteShader(fragmentShaderID);
+
+	// Edge Detection Shader
+	temp = readShaderCode("shader/EdgeDetectionVertexShader.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(vertexShaderID, 1, adapter, 0);
+	temp = readShaderCode("shader/EdgeDetectionFragmentShader.glsl");
+	adapter[0] = temp.c_str();
+	glShaderSource(fragmentShaderID, 1, adapter, 0);
+
+	glCompileShader(vertexShaderID);
+	glCompileShader(fragmentShaderID);
+
+	edgeDetectionProgramID = glCreateProgram();
+	glAttachShader(edgeDetectionProgramID, vertexShaderID);
+	glAttachShader(edgeDetectionProgramID, fragmentShaderID);
+	glLinkProgram(edgeDetectionProgramID);
+	glDeleteShader(vertexShaderID);
+	glDeleteShader(fragmentShaderID);
 }
 
 void MeGlWindow::loadCubemap() {
@@ -432,7 +452,7 @@ void MeGlWindow::paintGL()
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, frameDepthID, 0);
 
 	lightCamera.setPosition(lightPosition);
-	renderCamera(lightCamera);
+	renderCamera(lightCamera, programID);
 
 	// Unbind texture's FBO (back to default FB)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -440,7 +460,8 @@ void MeGlWindow::paintGL()
 	glViewport(0, 0, width(), height()); // Viewport for main window
 	GLuint status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
-	renderCamera(camera);
+	//renderCamera(lightCamera, programID);
+	renderCamera(camera, programID);
 
 	// Scene matrix setup
 	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
@@ -455,7 +476,7 @@ void MeGlWindow::paintGL()
 
 	glBindVertexArray(cubeVertexArrayObjectID);
 	mat4 cubeModelToWorldMatrix =
-		glm::translate(-1.0f, 2.0f, -15.0f);
+		glm::translate(0.0f, 2.0f, -15.0f);
 	mat4 fullTransformMatrix = World2ProjectionMatrix * cubeModelToWorldMatrix;
 	glUniformMatrix4fv(fullTransformMatrixMatrixUniformLocation, 1, GL_FALSE, &fullTransformMatrix[0][0]);
 
@@ -492,16 +513,53 @@ void MeGlWindow::paintGL()
 	glUniformMatrix4fv(planeTextureTransformMatrixUniformLocation, 1, GL_FALSE, &planeTextureTransformMatrix[0][0]);
 	glUniformMatrix4fv(planeTextureM2WMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
 	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
+
+	// CubeMap Setup
+	GLint CubeMapUniformLocation = glGetUniformLocation(programID, "cubemap");
+	glUniform1i(CubeMapUniformLocation, 2);
+
+	// CubeMap
+	glUseProgram(cubemapProgramID);
+	CubeMapUniformLocation = glGetUniformLocation(cubemapProgramID, "cubemap");
+	glUniform1i(CubeMapUniformLocation, 2);
+
+	glBindVertexArray(cubeVertexArrayObjectID);
+	mat4 cubemapModelToWorldMatrix = glm::scale(70.0f, 70.0f, 70.0f);
+	// Cubemap doesn't move with camera
+	worldToViewMatrix[3][0] = 0.0;
+	worldToViewMatrix[3][1] = 0.0;
+	worldToViewMatrix[3][2] = 0.0;
+	GLuint SkyboxTransformMatrixUniformLocation = glGetUniformLocation(cubemapProgramID, "skyboxTransformMatrix");
+	mat4 skyboxTransformMatrix = viewToProjectionMatrix * worldToViewMatrix * cubemapModelToWorldMatrix;
+	glUniformMatrix4fv(SkyboxTransformMatrixUniformLocation, 1, GL_FALSE, &skyboxTransformMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
+
+	//PostProcess Plane
+	glUseProgram(edgeDetectionProgramID);
+	rendertoTextureUniformLocation = glGetUniformLocation(edgeDetectionProgramID, "RenderTex");
+	glUniform1i(rendertoTextureUniformLocation, 6);
+
+	glBindVertexArray(planeVertexArrayObjectID);
+	planeModelToWorldMatrix =
+		glm::translate(-0.5f, 0.8f, -7.0f) *
+		glm::rotate(90.0f, vec3(1.0f, 0.0f, 0.0f)) *
+		glm::scale(0.7f, 0.7f, 0.7f);
+	planeTextureTransformMatrixUniformLocation = glGetUniformLocation(edgeDetectionProgramID, "fullTransformMatrix");
+	planeTextureM2WMatrixUniformLocation = glGetUniformLocation(edgeDetectionProgramID, "modelToWorldMatrix");
+	planeTextureTransformMatrix = World2ProjectionMatrix * planeModelToWorldMatrix;
+	glUniformMatrix4fv(planeTextureTransformMatrixUniformLocation, 1, GL_FALSE, &planeTextureTransformMatrix[0][0]);
+	glUniformMatrix4fv(planeTextureM2WMatrixUniformLocation, 1, GL_FALSE, &planeModelToWorldMatrix[0][0]);
+	glDrawElements(GL_TRIANGLES, planeNumIndices, GL_UNSIGNED_SHORT, (void*)planeSizeofVerts);
 }
 
-void MeGlWindow::renderCamera(Camera &camera) {
+void MeGlWindow::renderCamera(Camera &camera, GLuint programID) {
 	// Change with QTimer
 	yAngle += 0.5f;
 	if (yAngle > 360.0f) yAngle -= 360.0f;
 
 	// Matrix Setup
 	glm::mat4 worldToViewMatrix = camera.getWorldToViewMatrix();
-	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 140.0f);
+	glm::mat4 viewToProjectionMatrix = glm::perspective(60.0f, ((float)width()) / height(), 0.1f, 20.0f);
 	glm::mat4 World2ProjectionMatrix = viewToProjectionMatrix  * worldToViewMatrix;
 
 	GLint fullTransformMatrixMatrixUniformLocation = glGetUniformLocation(programID, "fullTransformMatrix");
@@ -535,6 +593,8 @@ void MeGlWindow::renderCamera(Camera &camera) {
 	// CubeMap Setup
 	GLint CubeMapUniformLocation = glGetUniformLocation(programID, "cubemap");
 	glUniform1i(CubeMapUniformLocation, 2);
+	GLuint rendertoTextureUniformLocation = glGetUniformLocation(programID, "RenderTex");
+	glUniform1i(rendertoTextureUniformLocation, 6);
 
 	// Cube1
 	glBindVertexArray(cubeVertexArrayObjectID);
@@ -601,19 +661,5 @@ void MeGlWindow::renderCamera(Camera &camera) {
 
 
 
-	// CubeMap
-	glUseProgram(cubemapProgramID);
-	CubeMapUniformLocation = glGetUniformLocation(cubemapProgramID, "cubemap");
-	glUniform1i(CubeMapUniformLocation, 2);
-
-	glBindVertexArray(cubeVertexArrayObjectID);
-	mat4 cubemapModelToWorldMatrix = glm::scale(70.0f, 70.0f, 70.0f);
-	// Cubemap doesn't move with camera
-	worldToViewMatrix[3][0] = 0.0;
-	worldToViewMatrix[3][1] = 0.0;
-	worldToViewMatrix[3][2] = 0.0;
-	GLuint SkyboxTransformMatrixUniformLocation = glGetUniformLocation(cubemapProgramID, "skyboxTransformMatrix");
-	mat4 skyboxTransformMatrix = viewToProjectionMatrix * worldToViewMatrix * cubemapModelToWorldMatrix;
-	glUniformMatrix4fv(SkyboxTransformMatrixUniformLocation, 1, GL_FALSE, &skyboxTransformMatrix[0][0]);
-	glDrawElements(GL_TRIANGLES, cubeNumIndices, GL_UNSIGNED_SHORT, (void*)cubeSizeofVerts);
+	
 }

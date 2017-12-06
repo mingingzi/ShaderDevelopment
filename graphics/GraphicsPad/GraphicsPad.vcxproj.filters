@@ -27,5 +27,7 @@
     <None Include="shader\RendertoTextureFragmentShader.glsl" />
     <None Include="shader\ReceiveShadowVertexShader.glsl" />
     <None Include="shader\ReceiveShadowFragmentShader.glsl" />
+    <None Include="shader\EdgeDetectionVertexShader.glsl" />
+    <None Include="shader\EdgeDetectionFragmentShader.glsl" />
   </ItemGroup>
 </Project>
